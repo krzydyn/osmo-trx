@@ -44,6 +44,16 @@ using namespace GSM;
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
+static void writeToFile(radioVector *radio_burst, size_t chan)
+{
+  GSM::Time time = radio_burst->getTime();
+  std::ostringstream fname;
+  fname << chan << "_" << time.FN() << "_" << time.TN() << ".fc";
+  std::ofstream outfile (fname.str().c_str(), std::ofstream::binary);
+  outfile.write((char*)radio_burst->getVector()->begin(), radio_burst->getVector()->size() * 2 * sizeof(float));
+  outfile.close();
+}
+
 TransceiverState::TransceiverState()
   : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
 {
@@ -80,7 +90,10 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, un
 
   for (size_t n = 0; n < 8; n++) {
     for (size_t i = 0; i < 102; i++) {
-      switch (filler) {
+//      if (!( n == 0 && i == 0 )) 
+//		  burst = generateEmptyBurst(sps, n);
+//	  else
+	  switch (filler) {
       case Transceiver::FILLER_DUMMY:
         burst = generateDummyBurst(sps, n);
         break;
@@ -390,6 +403,8 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     zeros[i] = state->chanType[TN] == NONE;
 
     if ((burst = mTxPriorityQueues[i].getCurrentBurst(nowTime))) {
+      LOG(DEBUG) << "Pulled real burst at " << nowTime << " zeros? = " << zeros[i];
+//	  writeToFile(burst, i);
       bursts[i] = burst->getVector();
 
       if (state->mRetrans) {
@@ -403,6 +418,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     }
   }
 
+  LOG(DEBUG) << "Sending burst at " << nowTime << " zeros? = " << zeros[0];
   mRadioInterface->driveTransmitRadio(bursts, zeros);
 
   for (size_t i = 0; i < mChans; i++) {
@@ -574,16 +590,6 @@ SoftVector *Transceiver::demodulate(signalVector &burst, complex amp,
 	  return demodEdgeBurst(burst, mSPSRx, amp, toa);
 
   return demodulateBurst(burst, mSPSRx, amp, toa);
-}
-
-void writeToFile(radioVector *radio_burst, size_t chan)
-{
-  GSM::Time time = radio_burst->getTime();
-  std::ostringstream fname;
-  fname << chan << "_" << time.FN() << "_" << time.TN() << ".fc";
-  std::ofstream outfile (fname.str().c_str(), std::ofstream::binary);
-  outfile.write((char*)radio_burst->getVector()->begin(), radio_burst->getVector()->size() * 2 * sizeof(float));
-  outfile.close();
 }
 
 /*

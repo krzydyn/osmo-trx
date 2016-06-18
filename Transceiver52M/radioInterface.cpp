@@ -122,6 +122,7 @@ int RadioInterface::setPowerAttenuation(int atten, size_t chan)
 
   rfGain = mRadio->setTxGain(mRadio->maxTxGain() - (double) atten, chan);
   digAtten = (double) atten - mRadio->maxTxGain() + rfGain;
+  LOG(INFO) << "Tx RF gain = " << rfGain << " dB, digital attenuation = " << digAtten << " dB";
 
   if (digAtten < 1.0)
     powerScaling[chan] = 1.0;
@@ -403,6 +404,7 @@ void RadioInterface::pushBuffer()
   }
 
   /* Send the all samples in the send buffer */ 
+  LOG(DEBUG) << "Sending " << sendCursor << " samples at " << writeTimestamp << " power scale = " << powerScaling[0];
   num_sent = mRadio->writeSamples(convertSendBuffer,
                                   sendCursor,
                                   &underrun,

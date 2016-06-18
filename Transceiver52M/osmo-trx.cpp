@@ -403,8 +403,8 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		}
 	}
 
-	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
-		config->filler = Transceiver::FILLER_EDGE_RAND;
+//	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
+//		config->filler = Transceiver::FILLER_EDGE_RAND;
 
 	if ((config->tx_sps != 1) && (config->tx_sps != 4)) {
 		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);

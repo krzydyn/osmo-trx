@@ -19,6 +19,7 @@
  * See the COPYING file in the main directory for details.
  */
 
+#include <fstream>
 #include "radioDevice.h"
 #include "Threads.h"
 #include "Logger.h"
@@ -509,7 +510,7 @@ double uhd_device::get_dev_offset(bool edge, bool diversity)
 		return 0.0;
 	}
 
-	std::cout << "-- Setting " << offset->desc << std::endl;
+	std::cout << "-- Setting " << offset->desc << " (offset " << offset->offset*1000.0 << " ms = " << offset->offset*GSMRATE << " samples)" <<std::endl;
 
 	return offset->offset;
 }
@@ -850,6 +851,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		ts_offset = 0;
 	} else  {
 		ts_offset = (TIMESTAMP) (offset * rx_rate);
+		LOG(ERR) << "TS_OFFSET = " << ts_offset << " rx_rate = " << rx_rate;
 	}
 
 	// Initialize and shadow gain values 
@@ -942,7 +944,7 @@ bool uhd_device::start()
 	}
 
 	// Register msg handler
-	uhd::msg::register_handler(&uhd_msg_handler);
+	//uhd::msg::register_handler(&uhd_msg_handler);
 
 	// Start asynchronous event (underrun check) loop
 	async_event_thrd = new Thread();
@@ -996,9 +998,17 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 			LOG(ALERT) << "UHD: Receive timed out";
 			return ERROR_TIMEOUT;
 		case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
+			LOG(ALERT) << "UHD: Receive overflow";
+			return ERROR_UNHANDLED;
 		case uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND:
+			LOG(ALERT) << "UHD: Late command";
+			return ERROR_UNHANDLED;
 		case uhd::rx_metadata_t::ERROR_CODE_BROKEN_CHAIN:
+			LOG(ALERT) << "UHD: Broken chain";
+			return ERROR_UNHANDLED;
 		case uhd::rx_metadata_t::ERROR_CODE_BAD_PACKET:
+			LOG(ALERT) << "UHD: Bad packet";
+			return ERROR_UNHANDLED;
 		default:
 			return ERROR_UNHANDLED;
 		}
@@ -1118,6 +1128,17 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	return len;
 }
 
+static void writeToFile(const std::vector<short *> &bufs, int len, const uhd::time_spec_t &timestamp, double tick_rate)
+{
+	for (size_t i=0; i<bufs.size(); i++) {
+		std::ostringstream fname;
+		fname << i << "_" << timestamp.to_ticks(tick_rate) << ".sc";
+		std::ofstream outfile (fname.str().c_str(), std::ofstream::binary);
+		outfile.write((char*)bufs[i], len * 2 * sizeof(short));
+		outfile.close();
+	}
+}
+
 int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
 			     unsigned long long timestamp,bool isControl)
 {
@@ -1160,6 +1181,8 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	}
 
 	thread_enable_cancel(false);
+	LOG(DEBUG) << "Sending timestamp = " << metadata.time_spec.get_real_secs() << " (" << metadata.time_spec.to_ticks(tx_rate) << " ticks)";
+//	writeToFile(bufs, len, metadata.time_spec, tx_rate);
 	size_t num_smpls = tx_stream->send(bufs, len, metadata);
 	thread_enable_cancel(true);
 
