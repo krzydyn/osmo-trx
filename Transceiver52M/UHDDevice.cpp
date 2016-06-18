@@ -472,12 +472,6 @@ double uhd_device::get_dev_offset(bool edge, bool diversity)
 		return 0.0;
 	}
 
-	if (edge && (dev_type != B200) &&
-	    (dev_type != B210) && (dev_type != UMTRX)) {
-		LOG(ALERT) << "EDGE is supported on B200/B210 and UmTRX only";
-		return 0.0;
-	}
-
 	/* Special cases (e.g. diversity receiver) */
 	if (diversity) {
 		if (dev_type != UMTRX) {
@@ -506,7 +500,7 @@ double uhd_device::get_dev_offset(bool edge, bool diversity)
 	}
 
 	if (!offset) {
-		LOG(ERR) << "Invalid device configuration";
+		LOG(ERR) << "Invalid device configuration. Your configuration is not yet supported by osmo-trx. Patches are welcome.";
 		return 0.0;
 	}
 
