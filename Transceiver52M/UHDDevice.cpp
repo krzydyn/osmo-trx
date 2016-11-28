@@ -822,12 +822,12 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	}
 
 	/* Create TX and RX streamers */
-	uhd::stream_args_t stream_args("sc16");
+	uhd::stream_args_t stream_args("sc12");
 	for (size_t i = 0; i < chans; i++)
 		stream_args.channels.push_back(i);
 
-	tx_stream = usrp_dev->get_tx_stream(stream_args);
 	rx_stream = usrp_dev->get_rx_stream(stream_args);
+	tx_stream = usrp_dev->get_tx_stream(stream_args);
 
 	/* Number of samples per over-the-wire packet */
 	tx_spp = tx_stream->get_max_num_samps();
