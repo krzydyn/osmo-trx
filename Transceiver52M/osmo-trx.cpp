@@ -235,6 +235,10 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
 		radio = new RadioInterfaceResamp(usrp, config->tx_sps,
 						 config->chans);
 		break;
+        case RadioDevice::RESAMP_LIMESDR:
+            	radio = new RadioInterfaceLimeSDR(usrp, config->tx_sps,
+					   config->rx_sps, config->chans);
+                break;
 	case RadioDevice::DIVERSITY:
 		radio = new RadioInterfaceDiversity(usrp, config->tx_sps,
 						    config->chans);

@@ -1,5 +1,5 @@
 /*
- * Device support for Ettus Research UHD driver 
+ * Device support for Ettus Research UHD driver
  * Written by Thomas Tsou <ttsou@vt.edu>
  *
  * Copyright 2010,2011 Free Software Foundation, Inc.
@@ -57,17 +57,18 @@
 #define UMTRX_VGA1_DEF   -18
 
 enum uhd_dev_type {
-	USRP1,
-	USRP2,
-	B100,
-	B200,
-	B210,
-	E1XX,
-	E3XX,
-	X3XX,
-	UMTRX,
-	LIMESDR,
-	NUM_USRP_TYPES,
+        USRP1,
+        USRP2,
+        B100,
+        B200,
+        B210,
+        E1XX,
+        E3XX,
+        X3XX,
+        UMTRX,
+        LIMESDR,
+        LIMESDR_PCIE,
+        NUM_USRP_TYPES,
 };
 
 struct uhd_dev_offset {
@@ -123,7 +124,8 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B200,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 EDGE mode (4 SPS TX/RX)" },
 	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 EDGE mode (4 SPS TX/RX)" },
 	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX EDGE mode (4 SPS TX/RX)" },
-	{ LIMESDR, 4, 4, 16.5/GSMRATE, "STREAM/LimeSDR EDGE mode (4 SPS TX/RX)" },
+	{ LIMESDR, 4, 4, 8.6e-5, "STREAM/LimeSDR EDGE mode (4 SPS TX/RX)" },
+        { LIMESDR_PCIE, 4, 4, 4.8e-5, "STREAM/LimeSDR EDGE mode (4 SPS TX/RX)" },
 };
 #define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
 
@@ -160,6 +162,8 @@ static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 		return USRP2_BASE_RT * sps;
 	case B100:
 		return B100_BASE_RT * sps;
+        case LIMESDR_PCIE:
+		return GSMRATE * sps*3;
 	case B200:
 	case B210:
 	case E1XX:
@@ -184,8 +188,8 @@ class smpl_buf {
 public:
 	/** Sample buffer constructor
 	    @param len number of 32-bit samples the buffer should hold
-	    @param rate sample clockrate 
-	    @param timestamp 
+	    @param rate sample clockrate
+	    @param timestamp
 	*/
 	smpl_buf(size_t len, double rate);
 	~smpl_buf();
@@ -213,7 +217,7 @@ public:
 	*/
 	std::string str_status(size_t ts) const;
 
-	/** Formatted error string 
+	/** Formatted error string
 	    @param code an error code
 	    @return a formatted error string
 	*/
@@ -364,7 +368,7 @@ void *async_event_loop(uhd_device *dev)
 	return NULL;
 }
 
-/* 
+/*
     Catch and drop underrun 'U' and overrun 'O' messages from stdout
     since we already report using the logging facility. Direct
     everything else appropriately.
@@ -558,6 +562,10 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 		if (set_master_clk(LIMESDR_CLK_RT) < 0)
 			return -1;
 	}
+        else if (dev_type == LIMESDR_PCIE) {
+		if (set_master_clk(LIMESDR_CLK_RT*3) < 0)
+			return -1;
+	}
 
 	// Set sample rates
 	try {
@@ -650,7 +658,8 @@ bool uhd_device::parse_dev_type()
 	std::string mboard_str, dev_str;
 	uhd::property_tree::sptr prop_tree;
 	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str, e3xx_str,
-	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str, limesdr_str;
+	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str, limesdr_str,
+               limesdr_pcie_str;
 
 	prop_tree = usrp_dev->get_device()->get_tree();
 	dev_str = prop_tree->access<std::string>("/name").get();
@@ -669,7 +678,8 @@ bool uhd_device::parse_dev_type()
 	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
 	// LimeSDR is based on STREAM board, so it's advertized as such
-	limesdr_str = dev_str.find("STREAM");
+        limesdr_str = dev_str.find("STREAM");
+        limesdr_pcie_str = dev_str.find("PCIEXillybus");
 
 	if (usrp1_str != std::string::npos) {
 		LOG(ALERT) << "USRP1 is not supported using the UHD driver";
@@ -712,6 +722,9 @@ bool uhd_device::parse_dev_type()
 	} else if (limesdr_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
 		dev_type = LIMESDR;
+        } else if (limesdr_pcie_str != std::string::npos) {
+		tx_window = TX_WINDOW_USRP1;
+		dev_type = LIMESDR_PCIE;
 	} else {
 		LOG(ALERT) << "Unknown UHD device type "
 			   << dev_str << " " << mboard_str;
@@ -814,7 +827,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 			if (!diversity)
 				usrp_dev->set_rx_bandwidth(500*1000*2, i);
 		}
-	} else if (dev_type == LIMESDR) {
+	} else if (dev_type == LIMESDR || dev_type == LIMESDR_PCIE) {
 		for (size_t i = 0; i < chans; i++) {
 			usrp_dev->set_tx_bandwidth(5e6, i);
 			usrp_dev->set_rx_bandwidth(5e6, i);
@@ -822,11 +835,15 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	}
 
 	/* Create TX and RX streamers */
-	uhd::stream_args_t stream_args("sc12");
+	uhd::stream_args_t stream_args("sc16");
+        if (dev_type == LIMESDR || dev_type == LIMESDR_PCIE)
+        {
+            stream_args = uhd::stream_args_t("sc12");
+            stream_args.args["latency"] = (dev_type == LIMESDR) ? "0.0" : "0.3";
+        }
 	for (size_t i = 0; i < chans; i++)
 		stream_args.channels.push_back(i);
-
-	rx_stream = usrp_dev->get_rx_stream(stream_args);
+        rx_stream = usrp_dev->get_rx_stream(stream_args);
 	tx_stream = usrp_dev->get_tx_stream(stream_args);
 
 	/* Number of samples per over-the-wire packet */
@@ -854,7 +871,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		LOG(ERR) << "TS_OFFSET = " << ts_offset << " rx_rate = " << rx_rate;
 	}
 
-	// Initialize and shadow gain values 
+	// Initialize and shadow gain values
 	init_gains();
 
 	// Print configuration
@@ -869,6 +886,8 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	case USRP2:
 	case X3XX:
 		return RESAMP_100M;
+        case LIMESDR_PCIE:
+                return RESAMP_LIMESDR;
 	case B200:
 	case B210:
 	case E1XX:
@@ -1025,7 +1044,7 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 	// Monotonicity check
 	if (ts < prev_ts) {
 		LOG(ALERT) << "UHD: Loss of monotonic time";
-		LOG(ALERT) << "Current time: " << ts.get_real_secs() << ", " 
+		LOG(ALERT) << "Current time: " << ts.get_real_secs() << ", "
 			   << "Previous time: " << prev_ts.get_real_secs();
 		return ERROR_TIMING;
 	} else {
@@ -1081,7 +1100,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 		rx_pkt_cnt++;
 
-		// Check for errors 
+		// Check for errors
 		rc = check_rx_md_err(metadata, num_smpls);
 		switch (rc) {
 		case ERROR_UNRECOVERABLE:
@@ -1353,7 +1372,7 @@ TIMESTAMP uhd_device::initialReadTimestamp()
 
 double uhd_device::fullScaleInputValue()
 {
-	if (dev_type == LIMESDR)
+	if (dev_type == LIMESDR || dev_type == LIMESDR_PCIE)
 		return (double) 2047 * LIMESDR_TX_AMPL;
 	if (dev_type == UMTRX)
 		return (double) SHRT_MAX * UMTRX_TX_AMPL;
@@ -1363,7 +1382,7 @@ double uhd_device::fullScaleInputValue()
 
 double uhd_device::fullScaleOutputValue()
 {
-	if (dev_type == LIMESDR) return (double) 2047;
+	if (dev_type == LIMESDR || dev_type == LIMESDR_PCIE) return (double) 2047;
 	return (double) SHRT_MAX;
 }
 

@@ -408,7 +408,7 @@ void RadioInterface::pushBuffer()
   num_sent = mRadio->writeSamples(convertSendBuffer,
                                   sendCursor,
                                   &underrun,
-                                  writeTimestamp-30);
+                                  writeTimestamp);
   writeTimestamp += num_sent;
   sendCursor = 0;
 }

@@ -14,7 +14,7 @@
 
 
 
-#include "sigProcLib.h"  
+#include "sigProcLib.h"
 #include "GSMCommon.h"
 #include "LinkedLists.h"
 #include "radioDevice.h"
@@ -61,7 +61,7 @@ protected:
 
 private:
 
-  /** format samples to USRP */ 
+  /** format samples to USRP */
   int radioifyVector(signalVector &wVector,
                      float *floatVector,
                      bool zero);
@@ -133,7 +133,7 @@ public:
   /** set thread priority on current thread */
   void setPriority(float prio = 0.5) { mRadio->setPriority(prio); }
 
-  /** get transport window type of attached device */ 
+  /** get transport window type of attached device */
   enum RadioDevice::TxWindowType getWindowType() { return mRadio->getWindowType(); }
 
 #if USRP1
@@ -167,6 +167,26 @@ public:
   RadioInterfaceResamp(RadioDevice* wRadio, size_t wSPS = 4, size_t chans = 1);
 
   ~RadioInterfaceResamp();
+
+  bool init(int type);
+  void close();
+};
+
+
+class RadioInterfaceLimeSDR : public RadioInterface {
+
+private:
+
+  void pushBuffer();
+  void pullBuffer();
+
+public:
+
+  RadioInterfaceLimeSDR(RadioDevice* wRadio = NULL,
+                 size_t tx_sps = 4, size_t rx_sps = 1,
+		 size_t chans = 1);
+
+  ~RadioInterfaceLimeSDR();
 
   bool init(int type);
   void close();
