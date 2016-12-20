@@ -897,6 +897,20 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		break;
 	}
 
+	//force an initial activate stream to get rx threads started
+	//this ensures that good timestamps are read into the system
+	uhd::stream_cmd_t cmd = uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE;
+	cmd.num_samps = rx_spp;
+	cmd.stream_now = true;
+	usrp_dev->issue_stream_cmd(cmd);
+
+	//reset the tick counter offset to 0 to avoid getting
+	//large tick values that cause wrap around uhd times
+	usrp_dev->set_time_now(0.0);
+
+	//read out the requested burst from above
+	this->flush_recv(1);
+
 	return NORMAL;
 }
 
