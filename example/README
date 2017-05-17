@@ -1,0 +1,17 @@
+1. 'install.sh' contains instalation steps (including instalation of osmo-trx from git):
+1.1. To perform all steps simply run './install.sh'
+1.2. tested git version are commented in 'install.sh'
+
+2. Run BSC (from directory containing openbsc.cfg and hlr.sqlite3):
+   osmo-nitb openbsc.cfg -l hlr.sqlite3 -P -C -a
+
+3. Run BTS (from directory containing osmo-bts.cfg):
+   osmobts-trx -t 2 -c osmo-bts.cfg
+
+4. Run TRX
+   osmo-trx -c 1 -s 4 -e
+
+5. To obtain phone number dial: *#100#
+
+6. Tested on LimeSDR-USB v1.4; FW 3; GW 2.9; 
+
