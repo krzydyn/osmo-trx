@@ -124,7 +124,7 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B200,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 EDGE mode (4 SPS TX/RX)" },
 	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 EDGE mode (4 SPS TX/RX)" },
 	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX EDGE mode (4 SPS TX/RX)" },
-	{ LIMESDR, 4, 4, 8.6e-5, "STREAM/LimeSDR EDGE mode (4 SPS TX/RX)" },
+	{ LIMESDR, 4, 4, 8.9e-5, "STREAM/LimeSDR EDGE mode (4 SPS TX/RX)" },
         { LIMESDR_PCIE, 4, 4, 4.8e-5, "STREAM/LimeSDR EDGE mode (4 SPS TX/RX)" },
 };
 #define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
