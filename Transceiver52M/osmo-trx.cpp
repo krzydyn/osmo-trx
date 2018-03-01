@@ -80,7 +80,11 @@ struct trx_config {
 	bool edge;
 };
 
-ConfigurationTable gConfig;
+//ConfigurationTable gConfig;
+#define CONFIGDB            "/etc/OpenBTS/OpenBTS.db"
+ConfigurationKeyMap getConfigurationKeys();
+ConfigurationTable gConfig(CONFIGDB, "transceiver", getConfigurationKeys());
+
 
 volatile bool gshutdown = false;
 
@@ -109,7 +113,7 @@ bool testConfig()
 	if (!gConfig.set(test, val)) {
 		std::cerr << std::endl;
 		std::cerr << "Config: Failed to set test key" << std::endl;
-		return false;
+		//return false;
 	} else {
 		gConfig.remove(test);
 	}
@@ -492,3 +496,39 @@ shutdown:
 
 	return 0;
 }
+
+ConfigurationKeyMap getConfigurationKeys()
+{
+    ConfigurationKeyMap map;
+    ConfigurationKey *tmp;
+
+    tmp = new ConfigurationKey("TRX.RadioFrequencyOffset","128",
+        "~170Hz steps",
+        ConfigurationKey::FACTORY,
+        ConfigurationKey::VALRANGE,
+        "96:160",// educated guess
+        true,
+        "Fine-tuning adjustment for the transceiver master clock.  "
+            "Roughly 170 Hz/step.  "
+            "Set at the factory.  "
+            "Do not adjust without proper calibration."
+    );
+    map[tmp->getName()] = *tmp;
+    delete tmp;
+
+    tmp = new ConfigurationKey("TRX.TxAttenOffset","0",
+        "dB of attenuation",
+        ConfigurationKey::FACTORY,
+        ConfigurationKey::VALRANGE,
+        "0:100",// educated guess
+        true,
+        "Hardware-specific gain adjustment for transmitter, matched to the power amplifier, expessed as an attenuationi in dB.  "
+            "Set at the factory.  "
+            "Do not adjust without proper calibration."
+    );
+    map[tmp->getName()] = *tmp;
+    delete tmp;
+
+    return map;
+}
+

@@ -678,7 +678,7 @@ bool uhd_device::parse_dev_type()
 	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
 	// LimeSDR is based on STREAM board, so it's advertized as such
-        limesdr_str = dev_str.find("STREAM");
+        limesdr_str = mboard_str.find("LimeSDR-USB");
         limesdr_pcie_str = dev_str.find("PCIEXillybus");
 
 	if (usrp1_str != std::string::npos) {
